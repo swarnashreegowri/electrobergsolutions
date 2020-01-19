@@ -1,0 +1,161 @@
+**** PROPERTIES SKAFFOLDER ****
+{
+    "forEachObj": "table",
+    "overwrite": true,
+    "_partials": []
+}
+**** END PROPERTIES SKAFFOLDER ****
+package com.{{#lowercase project.name}}{{/lowercase}}.db.{{#lowercase db.name}}{{/lowercase}}.mapper.base;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+
+import org.springframework.jdbc.core.RowMapper;
+import com.{{#lowercase project.name}}{{/lowercase}}.db.{{#lowercase db.name}}{{/lowercase}}.mapper.{{capitalize entity.name}};
+
+public class {{capitalize entity.name}}Base implements RowMapper<{{#capitalize entity.name}}{{/capitalize}}>{
+	
+	private Long _id;
+	
+	// Attributes
+	{{#each entity._attrs}}
+	private {{type}} {{name}};
+	{{/each}}
+	
+	{{#each entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../entity.name}}
+	// Relations {{name}}
+	private String {{name}};
+	{{/equal}}{{/equal}}{{/each}}
+	
+	{{#each entity._relations}}{{#equal type "m:m"}}{{#equal _ent1.name ../entity.name}}
+	// Relations m:m {{name}}
+	private ArrayList<Long> {{name}};
+	{{/equal}}{{/equal}}{{/each}}
+	
+	@Override
+	public {{#capitalize entity.name}}{{/capitalize}} mapRow(ResultSet rs, int rowNum) throws SQLException {
+		
+		{{#capitalize entity.name}}{{/capitalize}} obj = new {{#capitalize entity.name}}{{/capitalize}}();
+		try {
+			obj.set_id(rs.getLong("id"));
+			
+	        {{#each entity._attrs}}
+			obj.set{{#capitalize name}}{{/capitalize}}(rs.get{{toJDBCType type}}("{{name}}"));
+			{{/each}}
+			
+        	{{#each entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../entity.name}}
+        	// Relations 1:m {{name}}
+			obj.set{{#capitalize name}}{{/capitalize}}(rs.getString("{{name}}"));
+        	{{/equal}}{{/equal}}{{/each}}
+		}
+		catch(Exception e) {
+			e.printStackTrace();
+		}
+		return obj;
+	}
+
+
+	public Long get_id() {
+		return _id;
+	}
+
+	public void set_id(Long _id) {
+		this._id = _id;
+	}
+
+
+	{{#each entity._attrs}}
+	public {{type}} get{{#capitalize name}}{{/capitalize}}() {
+		return {{name}};
+	}
+
+
+	public void set{{#capitalize name}}{{/capitalize}}({{type}} {{name}}) {
+		this.{{name}} = {{name}};
+	}
+    {{/each}}
+
+	
+    {{#each entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../entity.name}}
+    // Relations 1:m {{name}}
+	public String get{{#capitalize name}}{{/capitalize}}() {
+		return {{name}};
+	}
+
+	public void set{{#capitalize name}}{{/capitalize}}(String {{name}}) {
+		this.{{name}} = {{name}};
+	}
+    {{/equal}}{{/equal}}{{/each}}
+    
+    
+    {{#each entity._relations}}{{#equal type "m:m"}}{{#equal _ent1.name ../entity.name}}
+    // Relations m:m {{name}}
+	public ArrayList<Long> get{{#capitalize name}}{{/capitalize}}() {
+		return {{name}};
+	}
+
+	public void set{{#capitalize name}}{{/capitalize}}(ArrayList<Long> {{name}}) {
+		this.{{name}} = {{name}};
+	}
+	
+	
+	public static class {{capitalize ../entity.name}}_{{name}} implements RowMapper<{{capitalize ../entity.name}}_{{name}}>{
+		
+		private Long _id;
+		
+		// Relations
+	
+		private Long id_{{_ent1.name}};
+		private Long id_{{_ent2.name}};
+				
+		
+		@Override
+		public {{capitalize ../entity.name}}_{{name}} mapRow(ResultSet rs, int rowNum) throws SQLException {
+			
+			{{capitalize ../entity.name}}_{{name}} obj = new {{capitalize ../entity.name}}_{{name}}();
+			try {
+				obj.set_id(rs.getLong("id"));
+				obj.setId_{{_ent1.name}}(rs.getLong("id_{{_ent1.name}}"));
+				obj.setId_{{_ent2.name}}(rs.getLong("id_{{_ent2.name}}"));
+			}
+			catch(Exception e) {
+				e.printStackTrace();
+			}
+			return obj;
+		}
+	
+	
+		public Long get_id() {
+			return _id;
+		}
+	
+		public void set_id(Long _id) {
+			this._id = _id;
+		}
+	
+		public Long getId_{{_ent1.name}}() {
+			return id_{{_ent1.name}};
+		}
+	
+	
+		public void setId_{{_ent1.name}}(Long id_{{_ent1.name}}) {
+			this.id_{{_ent1.name}} = id_{{_ent1.name}};
+		}
+	
+	
+		public Long getId_{{_ent2.name}}() {
+			return id_{{_ent2.name}};
+		}
+	
+	
+		public void setId_{{_ent2.name}}(Long id_{{_ent2.name}}) {
+			this.id_{{_ent2.name}} = id_{{_ent2.name}};
+		}
+		
+		
+	}
+    {{/equal}}{{/equal}}{{/each}}
+    
+}

@@ -1,0 +1,255 @@
+**** PROPERTIES SKAFFOLDER ****
+{
+    "forEachObj": "resource",
+    "overwrite": true,
+    "_partials": []
+}
+**** END PROPERTIES SKAFFOLDER ****
+package com.{{#lowercase project.name}}{{/lowercase}}.db.{{#lowercase db.name}}{{/lowercase}}.service.base;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.sql.DataSource;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
+import org.springframework.jdbc.core.namedparam.SqlParameterSource;
+import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
+import org.springframework.stereotype.Service;
+
+import com.{{lowercase project.name}}.db.{{lowercase db.name}}.mapper.{{capitalize resource._entity.name}};
+import com.{{lowercase project.name}}.db.{{lowercase db.name}}.service.{{capitalize resource._entity.name}}Service;
+
+@Service
+public class {{#capitalize resource.name}}{{/capitalize}}BaseService {
+
+	private static NamedParameterJdbcTemplate jdbcTemplate;
+
+	@Autowired
+	public void setDataSource(DataSource dataSource) {
+		jdbcTemplate = new NamedParameterJdbcTemplate(dataSource);
+	}
+
+
+{{#notNull resource._entity}}
+    //CRUD METHODS
+    
+    {{#each resource._services}}
+    	{{#equal crudAction 'list'}}
+    	
+    //CRUD - GET LIST
+    	
+	public List<{{#capitalize ../resource._entity.name}}{{/capitalize}}> getList() {
+	    
+		String sql = "select * from {{../resource._entity.name}}";
+		
+	    SqlParameterSource parameters = new MapSqlParameterSource();
+	    return jdbcTemplate.query(sql, parameters, new {{#capitalize ../resource._entity.name}}{{/capitalize}}());
+	}
+
+    	{{/equal}}
+    	{{#equal crudAction 'get'}}
+    	
+    //CRUD - GET ONE
+    	
+	public {{#capitalize ../resource._entity.name}}{{/capitalize}} get(Long id) {
+	    
+		String sql = "select * from {{../resource._entity.name}} where \"id\" = :id";
+		
+	    SqlParameterSource parameters = new MapSqlParameterSource()
+			.addValue("id", id);
+	    
+	    return jdbcTemplate.queryForObject(sql, parameters, new {{#capitalize ../resource._entity.name}}{{/capitalize}}());
+	}
+
+    	{{/equal}}
+    	{{#equal crudAction 'update'}}
+    
+    //CRUD - EDIT
+    	
+	public {{#capitalize ../resource._entity.name}}{{/capitalize}} update({{#capitalize ../resource._entity.name}}{{/capitalize}} obj, Long id) {
+
+		String sql = "UPDATE {{../resource._entity.name}} SET {{#each ../resource._entity._attrs}}\"{{name}}\" = :{{name}}{{#isNotLast ../../resource._entity._attrs @index}},{{/isNotLast}}{{/each}} {{#each ../resource._entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../../resource._entity.name}}, \"{{name}}\" = :{{name}} {{/equal}}{{/equal}}{{/each}} WHERE \"id\"=:id";
+
+		SqlParameterSource parameters = new MapSqlParameterSource()
+			.addValue("id", id){{#each ../resource._entity._attrs}}
+			.addValue("{{name}}", obj.get{{capitalize name}}()){{/each}}{{#each ../resource._entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../../resource._entity.name}}
+			.addValue("{{name}}", obj.get{{capitalize name}}()){{/equal}}{{/equal}}{{/each}};
+
+		jdbcTemplate.update(sql, parameters);
+	    return obj;
+	}
+	
+    	{{/equal}}
+    	{{#equal crudAction 'delete'}}
+    	
+    //CRUD - REMOVE
+    
+	public void delete(Long id) {
+		String sql = "DELETE FROM {{../resource._entity.name}} WHERE \"id\"=:id";
+		SqlParameterSource parameters = new MapSqlParameterSource()
+			.addValue("id", id);
+		
+		jdbcTemplate.update(sql, parameters);
+	}
+
+    	{{/equal}}
+    	{{#equal crudAction 'create'}}
+    
+    //CRUD - CREATE
+    	
+	public {{#capitalize ../resource._entity.name}}{{/capitalize}} insert({{#capitalize ../resource._entity.name}}{{/capitalize}} obj) {
+		
+		long id = jdbcTemplate.queryForObject("SELECT nvl(max(\"id\")+1, 1) FROM {{../resource._entity.name}}", new MapSqlParameterSource(), Long.class);
+		obj.set_id(id);
+		
+		String sql = "INSERT INTO {{../resource._entity.name}} (\"id\", {{#each ../resource._entity._attrs}}\"{{name}}\"{{#isNotLast ../../resource._entity._attrs @index}},{{/isNotLast}}{{/each}} {{#each ../resource._entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../../resource._entity.name}}, \"{{name}}\"{{/equal}}{{/equal}}{{/each}} )	VALUES (:id, {{#each ../resource._entity._attrs}}:{{name}}{{#isNotLast ../../resource._entity._attrs @index}},{{/isNotLast}}{{/each}} {{#each ../resource._entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../../resource._entity.name}}, :{{name}} {{/equal}}{{/equal}}{{/each}} )";
+
+		SqlParameterSource parameters = new MapSqlParameterSource()
+			.addValue("id", id){{#each ../resource._entity._attrs}}
+			.addValue("{{name}}", obj.get{{#capitalize name}}{{/capitalize}}()){{/each}}{{#each ../resource._entity._relations}}{{#equal type "1:m"}}{{#equal _ent1.name ../../resource._entity.name}}
+			.addValue("{{name}}", obj.get{{capitalize name}}()){{/equal}}{{/equal}}{{/each}};
+
+		jdbcTemplate.update(sql, parameters);
+	    return obj;
+	}
+	
+    	{{/equal}}
+    	{{#startWith crudAction 'findBy'}}
+    
+    //CRUD - FIND BY {{#subStr name 6 }}{{/subStr}}
+    	
+	public List<{{#capitalize ../resource._entity.name}}{{/capitalize}}> findBy{{#subStr name 6 }}{{/subStr}}(Long id{{#subStr name 6 }}{{/subStr}}) {
+		
+        {{#isMtoM name ../resource._relations ../resource.name}}
+        String sql = "select * from {{#capitalize ../resource._entity.name}}{{/capitalize}} WHERE \"id\" IN (SELECT \"id_{{relations._ent1.name}}\" FROM {{relations._ent1.name}}_{{relations.name}} WHERE \"id_{{relations._ent2.name}}\" = :id{{#subStr name 6 }}{{/subStr}})";
+		{{else}}
+		String sql = "select * from {{#capitalize ../resource._entity.name}}{{/capitalize}} WHERE \"{{#subStr name 6 }}{{/subStr}}\" = :id{{#subStr name 6 }}{{/subStr}}";
+		{{/isMtoM}}
+		
+	    SqlParameterSource parameters = new MapSqlParameterSource()
+		.addValue("id{{#subStr name 6 }}{{/subStr}}", id{{#subStr name 6 }}{{/subStr}});
+	    
+	    return jdbcTemplate.query(sql, parameters, new {{#capitalize ../resource._entity.name}}{{/capitalize}}());
+	}
+	
+    	{{/startWith}}
+    	{{#equal crudAction 'findBy'}}
+    
+    //CRUD - FIND BY ALL
+    	
+    	{{/equal}}
+    	{{#startWith crudAction 'get'}}
+    
+    //CRUD - GET RELATION {{#subStr name 3 }}{{/subStr}}
+    	
+    	{{/startWith}}
+    	{{#startWith crudAction 'addTo'}}
+    
+    //CRUD - ADD RELATION IN {{#subStr name 5 }}{{/subStr}}
+    	
+    	{{/startWith}}
+    	{{#startWith crudAction 'removeFrom'}}
+    
+    //CRUD - REMOVE RELATION IN {{#subStr name 10 }}{{/subStr}}
+    	
+    	{{/startWith}}
+    	{{#startWith crudAction 'linkTo'}}
+    
+    //CRUD - LINK TO {{#subStr name 6 }}{{/subStr}}
+    	
+    	{{/startWith}}
+    	{{#startWith crudAction 'unlinkFrom'}}
+    
+    //CRUD - UNLINK FROM {{#subStr name 10 }}{{/subStr}}
+    	
+    	{{/startWith}}
+    	{{#startWith crudAction 'strictLinkListOf'}}{{/startWith}}
+    {{/each}}{{/notNull}}
+    
+    {{#each resource._relations}}
+    
+    {{#equal type "m:m"}}{{#equal _ent1.name ../resource/name}}
+    // External relation m:m {{name}}
+    public static class {{capitalize ../resource.name}}_{{name}}Service {
+
+    	public static ArrayList<Long> findBy_{{_ent1.name}}(Long id_{{_ent1.name}}) {
+    		String sql = "select \"id_{{_ent2.name}}\" from {{_ent1.name}}_{{name}} WHERE \"id_{{_ent1.name}}\"=:id_{{_ent1.name}}";
+    		SqlParameterSource parameters = new MapSqlParameterSource()
+    			.addValue("id_{{_ent1.name}}", id_{{_ent1.name}});
+    	    
+    	    List<Long> listId = jdbcTemplate.queryForList(sql, parameters, Long.class);
+    		return (ArrayList<Long>) listId;
+    	}
+    	
+
+    	public static void updateRelation(Long id_{{_ent1.name}}, ArrayList<Long> {{name}}) {
+
+    		// Delete not in array
+    		String in = " and \"id_{{_ent2.name}}\" NOT IN (:{{name}})";
+    		String sql = "DELETE FROM {{_ent1.name}}_{{name}} WHERE \"id_{{_ent1.name}}\"=:id_{{_ent1.name}} ";
+    		
+    		if ({{name}} != null && {{name}}.size() > 0)
+    			sql = sql + in;
+    			
+    		SqlParameterSource parameters = new MapSqlParameterSource()
+    			.addValue("id_{{_ent1.name}}", id_{{_ent1.name}})
+    			.addValue("{{name}}", {{name}});
+    		
+    		jdbcTemplate.update(sql, parameters);
+    		
+    		// Get actual    		
+    	    List<Long> actual = {{capitalize ../resource.name}}Service.{{capitalize ../resource.name}}_{{name}}Service.findBy_{{_ent1.name}}(id_{{_ent1.name}});
+    	    
+    		// Insert new
+    		for (Long id_{{_ent2.name}} : {{name}}) {
+    			if (actual.indexOf(id_{{_ent2.name}}) == -1){
+    				{{capitalize ../resource.name}}Service.{{capitalize ../resource.name}}_{{name}}Service.insert(id_{{_ent1.name}}, id_{{_ent2.name}});
+    			}
+    		}
+    		
+    	}
+    	
+
+    	public static void insert(Long id_{{_ent1.name}}, Long id_{{_ent2.name}}) {
+    		{{capitalize ../resource.name}}.{{capitalize ../resource.name}}_{{name}} obj = new {{capitalize ../resource.name}}.{{capitalize ../resource.name}}_{{name}}();
+			Long id = jdbcTemplate.queryForObject("SELECT nvl(max(\"id\")+1, 1) FROM {{_ent1.name}}_{{name}}", new MapSqlParameterSource(), Long.class);
+			obj.set_id(id);
+			
+			String sql = "INSERT INTO {{_ent1.name}}_{{name}} (\"id\", \"id_{{_ent1.name}}\", \"id_{{_ent2.name}}\" )	VALUES (:id, :id_{{_ent1.name}}, :id_{{_ent2.name}})";
+
+			MapSqlParameterSource parameters = new MapSqlParameterSource()
+				.addValue("id", id)
+				.addValue("id_{{_ent1.name}}", id_{{_ent1.name}})
+				.addValue("id_{{_ent2.name}}", id_{{_ent2.name}});
+
+			jdbcTemplate.update(sql, parameters);
+    	}
+
+    }
+	{{/equal}}{{/equal}}{{/each}}
+    
+    /*
+     * CUSTOM SERVICES
+     * 
+     *	These services will be overwritten and implemented in  {{name}}Custom.js
+     */
+    
+    {{#each resource._services}}
+    {{#equal crudAction null}}
+    
+    /*
+    Name: {{name}}
+    Description: {{description}}
+    Params: {{#each _params}}
+    	{{type}} {{name}} - {{description}}{{/each}}
+    */
+    
+    	{{/equal}}
+    {{/each}}
+
+
+}

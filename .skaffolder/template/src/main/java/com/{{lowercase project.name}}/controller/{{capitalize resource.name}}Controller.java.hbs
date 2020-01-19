@@ -1,0 +1,18 @@
+**** PROPERTIES SKAFFOLDER ****
+{
+    "forEachObj": "resource",
+    "_partials": []
+}
+**** END PROPERTIES SKAFFOLDER ****
+package com.{{#lowercase project.name}}{{/lowercase}}.controller;
+
+import org.springframework.web.bind.annotation.RestController;
+
+import com.{{#lowercase project.name}}{{/lowercase}}.controller.base.{{capitalize resource.name}}BaseController;
+
+@RestController
+public class {{capitalize resource.name}}Controller extends {{capitalize resource.name}}BaseController {
+
+	//OVERRIDE HERE YOUR CUSTOM CONTROLLER
+
+}
