@@ -8,7 +8,7 @@
   <name>Manage_Film_Example</name>
 
   	<properties>
-		<springframework.version>4.2.0.RELEASE</springframework.version>
+		<springframework.version>5.2.10.RELEASE</springframework.version>
 		<jackson.version>2.5.3</jackson.version>
 	</properties>
 
